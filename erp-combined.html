@@ -16966,6 +16966,26 @@ function startLiveClock() {
   .tm-lab-in{border:1px dashed var(--bd);background:#fff;border-radius:7px;padding:4px 8px;font-size:11px;font-family:inherit;color:var(--ink);outline:none;min-width:96px;}
   .tm-divider{height:1px;background:var(--bd);margin:18px 0 14px;}
   .tm-act-item{display:flex;gap:9px;font-size:12.5px;color:var(--ink2);padding:7px 0;}
+  /* ---- Milestone planner states (MD: 28-Jun-2026): pending · paused · weight · progress ---- */
+  .tm-node.pending:before{border-color:var(--ink3);background:#fff;}
+  .tm-node.paused:before{border-color:var(--amber);background:#fff3df;}
+  .tm-node-meta{display:flex;align-items:center;gap:10px;margin-top:3px;flex-wrap:wrap;}
+  .tm-node-meta .d{margin-top:0;}
+  .tm-pending-b{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--ink3);background:#eef0f6;padding:2px 7px;border-radius:5px;}
+  .tm-paused{font-size:10px;font-weight:700;color:#b45309;background:#fff3df;border-radius:6px;padding:3px 9px;}
+  .tm-start-btn{border:1px solid var(--brand);background:var(--brand);color:#fff;border-radius:7px;padding:4px 13px;font-size:11.5px;font-weight:700;cursor:pointer;font-family:inherit;}
+  .tm-start-btn:hover{filter:brightness(1.08);}
+  .tm-pct{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;color:var(--ink3);margin-left:auto;}
+  .tm-pct input{width:48px;border:1px solid var(--bd);border-radius:6px;padding:3px 6px;font-size:11.5px;font-family:inherit;color:var(--ink);text-align:right;outline:none;background:#fff;}
+  .tm-pct input:focus{border-color:var(--brand);}
+  .tm-prog-wrap{display:inline-flex;align-items:center;gap:7px;vertical-align:middle;}
+  .tm-prog-track{display:inline-block;width:92px;height:7px;border-radius:5px;background:#e4e8f0;overflow:hidden;}
+  .tm-prog-track>span{display:block;height:100%;background:linear-gradient(90deg,#7c3aed,#16a34a);border-radius:5px;transition:width .3s;}
+  /* card progress bar (board view) */
+  .pf-prog{display:flex;align-items:center;gap:8px;margin:-1px 0 9px;}
+  .pf-prog-track{flex:1;height:6px;border-radius:5px;background:#eef0f6;overflow:hidden;}
+  .pf-prog-track>span{display:block;height:100%;background:linear-gradient(90deg,#7c3aed,#16a34a);border-radius:5px;transition:width .3s;}
+  .pf-prog-n{font-size:10.5px;font-weight:700;color:var(--ink2);min-width:34px;text-align:right;}
 </style>
 </head>
 <body>
@@ -17012,7 +17032,7 @@ function startLiveClock() {
           <div class="tm-sec-h">🗺 Task Map <span id="tmMapTotal" style="margin-left:auto;font-weight:600;text-transform:none;letter-spacing:0;color:var(--ink2);"></span></div>
           <div class="tm-tl" id="tmMap"></div>
           <div class="tm-add">
-            <input id="tmMsInput" placeholder="Add milestone — e.g. Eon Brain Plan Done" onkeydown="if(event.key==='Enter')addMilestone()">
+            <input id="tmMsInput" placeholder="Plan a milestone — e.g. Planning, Frontend, Backend…" onkeydown="if(event.key==='Enter')addMilestone()">
             <button class="pf-send" onclick="addMilestone()">Add</button>
           </div>
         </div>
@@ -17196,27 +17216,58 @@ function startLiveClock() {
   // live ticking duration "1h 20m 05s"
   function fmtLive(ms){ if(!ms||ms<0)ms=0; const s=Math.floor(ms/1000),h=Math.floor(s/3600),m=Math.floor((s%3600)/60),x=s%60;
     const pad=n=>String(n).padStart(2,'0'); return (h>0?h+'h ':'')+(h>0?pad(m):m)+'m '+pad(x)+'s'; }
-  // normalise milestones to {text,startTs,doneTs,marker} (back-fills the old {text,ts} shape)
+  // percentage, max 1 decimal, no trailing .0  → "33.3%" / "50%" / "100%"
+  function fmtPct(n){ if(!n||n<0)n=0; return (Math.round(n*10)/10).toString().replace(/\.0$/,'')+'%'; }
+  // normalise milestones to {text,startTs,doneTs,marker,accumMs,pct} (back-fills older shapes)
+  //   marker  → the "Task Created" node (never counts as work / weight)
+  //   pending → startTs==null, doneTs==null  (planned, timer not started)
+  //   running → startTs!=null, doneTs==null  (timer ticking)
+  //   done    → doneTs!=null
+  //   accumMs → banked work time (survives pause/resume + records the final total)
+  //   pct     → manual weight toward 100%  (null = auto / equal split)
   function normMs(t){
     if(!t.createdTs) t.createdTs = Date.now();
-    if(!t.milestones || !t.milestones.length){ t.milestones=[{text:'Task Created',startTs:t.createdTs,doneTs:t.createdTs,marker:true}]; return; }
+    if(!t.milestones || !t.milestones.length){ t.milestones=[{text:'Task Created',startTs:t.createdTs,doneTs:t.createdTs,marker:true,accumMs:0}]; return; }
     t.milestones = t.milestones.map((m,i)=>{
-      if(m.startTs!=null) return m;
-      const ts = m.ts!=null ? m.ts : t.createdTs;
+      if(m.startTs!==undefined) return m;            // already new-model (number OR null)
+      const ts = m.ts!=null ? m.ts : t.createdTs;    // migrate very old {text, ts}
       const isCreated = i===0 || /task created/i.test(m.text||'');
       return {text:m.text, startTs:ts, doneTs:ts, marker:isCreated};
     });
     if(t.milestones[0]) t.milestones[0].marker = true;
+    // back-fill new fields so older milestones keep their recorded time & gain a weight slot
+    t.milestones.forEach(m=>{
+      if(m.accumMs===undefined) m.accumMs = (!m.marker && m.doneTs!=null && m.startTs!=null) ? Math.max(0,m.doneTs-m.startTs) : 0;
+      if(m.pct===undefined) m.pct = null;
+    });
   }
-  // index of the one milestone that is started but not yet done (-1 if none)
-  function activeMs(t){ const a=t.milestones||[]; for(let i=0;i<a.length;i++){ if(!a[i].marker && a[i].doneTs==null) return i; } return -1; }
+  // index of the one milestone that is started (running) but not yet done (-1 if none)
+  function activeMs(t){ const a=t.milestones||[]; for(let i=0;i<a.length;i++){ if(!a[i].marker && a[i].startTs!=null && a[i].doneTs==null) return i; } return -1; }
+  // work time of a milestone: banked + the live segment if it's currently running
+  function workedMs(m){ let base=m.accumMs||0; if(m.startTs!=null && m.doneTs==null) base+=Date.now()-m.startTs; return base; }
+  // effective weight (%) of every milestone, aligned with t.milestones (marker = 0).
+  // Milestones with a manual pct keep it; the rest split the remaining % equally.
+  function msWeights(t){
+    const ms=t.milestones||[]; const out=ms.map(()=>0);
+    let manualSum=0, autoCount=0;
+    ms.forEach(m=>{ if(m.marker) return; if(m.pct!=null && m.pct!=='') manualSum+=(+m.pct||0); else autoCount++; });
+    const autoEach = autoCount>0 ? Math.max(0,100-manualSum)/autoCount : 0;
+    ms.forEach((m,i)=>{ if(m.marker) return; out[i] = (m.pct!=null && m.pct!=='') ? (+m.pct||0) : autoEach; });
+    return out;
+  }
+  // overall completion % = sum of the weights of the milestones marked done
+  function progressPct(t){ const w=msWeights(t); let p=0; (t.milestones||[]).forEach((m,i)=>{ if(!m.marker && m.doneTs!=null) p+=w[i]; }); return p; }
+  function realMsCount(t){ return (t.milestones||[]).filter(m=>!m.marker).length; }
 
   function cardHTML(t){
+    normMs(t);
     const glow = t.directorUnseen ? ' attn' : '';
     const rib = t.directorUnseen ? '<span class="pf-attn-rib">🔔 Director</span>' : '';
     const cmt = (t.feedback||[]).filter(f=>f.type==='comment').length;
     const vc  = (t.feedback||[]).filter(f=>f.type==='voice').length;
-    const ms  = (t.milestones||[]).length;
+    const ms  = realMsCount(t);
+    const pct = ms ? progressPct(t) : 0;
+    const prog = ms ? `<div class="pf-prog" title="${ms} milestone${ms>1?'s':''}"><div class="pf-prog-track"><span style="width:${Math.min(100,pct)}%"></span></div><span class="pf-prog-n">${fmtPct(pct)}</span></div>` : '';
     const label = t.createdByDirector
       ? '<span class="pf-tag director">👑 Created by Director</span>'
       : '<span class="pf-tag ops">Operational</span>';
@@ -17226,8 +17277,9 @@ function startLiveClock() {
       <div class="pf-card-title">${esc(t.title)}</div>
       ${dv?`<div class="pf-card-desc">${esc(dv)}</div>`:''}
       <div class="pf-tags">${label}<span class="pf-tag p-${t.priority}">${t.priority}</span></div>
+      ${prog}
       <div class="pf-card-foot">
-        <span>💬 ${cmt}</span><span>🎙 ${vc}</span>${ms>1?`<span>🗺 ${ms}</span>`:''}
+        <span>💬 ${cmt}</span><span>🎙 ${vc}</span>${ms?`<span>🗺 ${ms}</span>`:''}
         ${t.due?`<span class="due">📅 ${esc(fmtShort(t.due))}</span>`:''}
       </div>
     </div>`;
@@ -17286,47 +17338,89 @@ function startLiveClock() {
   function renderMap(t){
     normMs(t);
     const el=document.getElementById('tmMap'); if(!el) return;
-    const ai=activeMs(t); let totalMs=0, steps=0;
+    const ai=activeMs(t); const w=msWeights(t);
+    let totalMs=0, doneCount=0, realCount=0;
     el.innerHTML=(t.milestones||[]).map((m,i)=>{
-      const active=(i===ai);
-      const doneStep=(!m.marker && m.doneTs!=null);
-      if(doneStep){ steps++; totalMs+=(m.doneTs-m.startTs); }
-      else if(active){ steps++; }
-      const cls='tm-node'+(active?' active':'')+(doneStep?' done':'');
-      let titleBadge='', foot='';
-      if(active){
-        titleBadge=`<span class="tm-live" id="tmLiveTimer">⏱ ${fmtLive(Date.now()-m.startTs)}</span>`;
-        foot=`<button class="tm-done-btn" onclick="milestoneDone(${i})">✓ Mark Done</button>`;
-      } else if(doneStep){
-        titleBadge=`<span class="tm-worked">✓ Worked ${fmtDur2(m.doneTs-m.startTs)}</span>`;
+      // creation marker — no controls, no weight
+      if(m.marker){
+        return `<div class="tm-node">
+          <div class="t"><span class="tm-ttl">${esc(m.text)}</span></div>
+          <div class="d">${esc(fmtDateTime(m.doneTs||m.startTs))}</div>
+        </div>`;
       }
-      const when = active ? ('Started '+fmtDateTime(m.startTs)) : fmtDateTime(m.doneTs||m.startTs);
+      realCount++;
+      const running = (m.startTs!=null && m.doneTs==null);
+      const done    = (m.doneTs!=null);
+      const paused  = (!running && !done && (m.accumMs||0)>0);
+      const worked  = workedMs(m);
+      if(done){ totalMs+=worked; doneCount++; }
+      const cls='tm-node'+(running?' active':done?' done':paused?' paused':' pending');
+      let badge='';
+      if(running)      badge=`<span class="tm-live" id="tmLiveTimer">⏱ ${fmtLive(worked)}</span><span class="tm-inprog">● In progress</span>`;
+      else if(done)    badge=`<span class="tm-worked">✓ Worked ${fmtDur2(worked)}</span>`;
+      else if(paused)  badge=`<span class="tm-paused">⏸ Paused · ${fmtDur2(worked)}</span>`;
+      else             badge=`<span class="tm-pending-b">○ Not started</span>`;
+      // per-milestone weight field (blank placeholder = auto split)
+      const eff=w[i]||0;
+      const pctField=`<span class="tm-pct" onclick="event.stopPropagation()">`
+        + `<input type="number" min="0" max="100" step="any" value="${m.pct!=null?m.pct:''}" placeholder="${Math.round(eff*10)/10}"`
+        + ` onchange="setMsPct(${i},this.value)" title="Weight toward 100%. Leave blank for auto (${fmtPct(eff)}).">%</span>`;
+      // footer controls per state
+      let ctrls='';
+      if(running)      ctrls=`<button class="tm-done-btn" onclick="milestoneDone(${i})">✓ Mark Done</button>`;
+      else if(paused)  ctrls=`<button class="tm-start-btn" onclick="milestoneStart(${i})">▶ Resume</button><button class="tm-done-btn" onclick="milestoneDone(${i})">✓ Mark Done</button>`;
+      else if(!done)   ctrls=`<button class="tm-start-btn" onclick="milestoneStart(${i})">▶ Start</button>`;
+      const when = running ? ('Started '+fmtDateTime(m.startTs)) : done ? ('Done '+fmtDateTime(m.doneTs)) : paused ? 'Paused — resume to continue' : 'Planned · not started';
       return `<div class="${cls}">
-        <div class="t"><span class="tm-ttl">${esc(m.text)}</span>${titleBadge}${active?'<span class="tm-inprog">● In progress</span>':''}</div>
-        <div class="d">${esc(when)}</div>
-        ${foot?`<div class="tm-node-foot">${foot}</div>`:''}
+        <div class="t"><span class="tm-ttl">${esc(m.text)}</span>${badge}</div>
+        <div class="tm-node-meta"><span class="d">${esc(when)}</span>${pctField}</div>
+        ${ctrls?`<div class="tm-node-foot">${ctrls}</div>`:''}
       </div>`;
     }).join('') || '<div class="tm-empty">No milestones yet</div>';
-    // running total chip in the section header
+    // progress + running total chip in the section header
+    const pct=progressPct(t);
     const sum=document.getElementById('tmMapTotal');
-    if(sum) sum.innerHTML = steps ? `⏱ ${fmtDur2(totalMs)} worked · ${steps} step${steps>1?'s':''}${ai>=0?' · <b style="color:#b45309">1 running</b>':''}` : '';
+    if(sum) sum.innerHTML = realCount
+      ? `<span class="tm-prog-wrap"><span class="tm-prog-track"><span style="width:${Math.min(100,pct)}%"></span></span><b>${fmtPct(pct)}</b></span>`
+        + ` · ${doneCount}/${realCount} done` + (totalMs?` · ⏱ ${fmtDur2(totalMs)}`:'') + (ai>=0?` · <b style="color:#b45309">running</b>`:'')
+      : '';
     if(ai>=0) startTicker(); else stopTicker();
   }
+  // Add a PLANNED milestone — does not start its timer (click ▶ Start to begin).
   function addMilestone(){
     const t=tasks.find(x=>x.id===openId); if(!t)return;
     const inp=document.getElementById('tmMsInput'); const v=inp.value.trim(); if(!v)return;
     normMs(t);
-    const now=Date.now();
-    // starting the next step banks the time of the one currently running
-    const ai=activeMs(t); if(ai>=0) t.milestones[ai].doneTs=now;
-    t.milestones.push({text:v, startTs:now, doneTs:null});
+    t.milestones.push({text:v, startTs:null, doneTs:null, accumMs:0, pct:null});
     save(); renderMap(t); renderActivity(t); inp.value=''; inp.focus();
+  }
+  // Start (or resume) a milestone's timer. Auto-pauses any other running one (banks its time).
+  function milestoneStart(i){
+    const t=tasks.find(x=>x.id===openId); if(!t||!t.milestones[i]) return;
+    const m=t.milestones[i]; if(m.marker||m.doneTs!=null) return;
+    const now=Date.now();
+    t.milestones.forEach((o,j)=>{ if(j!==i && !o.marker && o.startTs!=null && o.doneTs==null){ o.accumMs=(o.accumMs||0)+(now-o.startTs); o.startTs=null; } });
+    m.startTs=now;
+    if(t.status==='todo') t.status='inprogress';   // working on it → move off the To-Do column
+    save(); renderMap(t); renderActivity(t); render();
   }
   function milestoneDone(i){
     const t=tasks.find(x=>x.id===openId); if(!t||!t.milestones[i]) return;
-    if(t.milestones[i].doneTs!=null) return;
-    t.milestones[i].doneTs=Date.now();
-    save(); renderMap(t); renderActivity(t);
+    const m=t.milestones[i]; if(m.marker||m.doneTs!=null) return;
+    const now=Date.now();
+    if(m.startTs!=null){ m.accumMs=(m.accumMs||0)+(now-m.startTs); m.startTs=null; }   // bank the live segment
+    m.doneTs=now;
+    const real=t.milestones.filter(x=>!x.marker);
+    if(real.length && real.every(x=>x.doneTs!=null)) t.status='done';   // all milestones complete → task done
+    save(); renderMap(t); renderActivity(t); render();
+  }
+  // Set / clear a milestone's manual weight (blank = back to auto split)
+  function setMsPct(i,val){
+    const t=tasks.find(x=>x.id===openId); if(!t||!t.milestones[i]) return;
+    val=(''+val).trim();
+    if(val===''){ t.milestones[i].pct=null; }
+    else{ let n=parseFloat(val); if(isNaN(n)||n<0)n=0; if(n>100)n=100; t.milestones[i].pct=n; }
+    save(); renderMap(t); render();
   }
   // live work-timer for the active milestone
   let tmTicker=null;
@@ -17336,7 +17430,7 @@ function startLiveClock() {
     const t=tasks.find(x=>x.id===openId); if(!t){ stopTicker(); return; }
     const ai=activeMs(t); const el=document.getElementById('tmLiveTimer');
     if(ai<0 || !el){ stopTicker(); return; }
-    el.textContent='⏱ '+fmtLive(Date.now()-t.milestones[ai].startTs);
+    el.textContent='⏱ '+fmtLive(workedMs(t.milestones[ai]));
   }
 
   // ---- Description ----
@@ -17380,9 +17474,14 @@ function startLiveClock() {
     document.getElementById('tmPaneProps').style.display=''; document.getElementById('tmPaneAct').style.display='none'; }
   function renderActivity(t){ const el=document.getElementById('tmPaneAct');
     const items=(t.milestones||[]).slice().reverse().map(m=>{
-      const running=(!m.marker && m.doneTs==null);
-      const worked=(!m.marker && m.doneTs!=null)?` · ⏱ ${fmtDur2(m.doneTs-m.startTs)}`:(running?' · ⏱ running…':'');
-      return `<div class="tm-act-item">${running?'🟠':'🔹'} <div><b>${esc(m.text)}</b><div style="font-size:11px;color:var(--ink3)">${esc(fmtDateTime(m.doneTs||m.startTs))}${worked}</div></div></div>`;
+      if(m.marker) return `<div class="tm-act-item">🔹 <div><b>${esc(m.text)}</b><div style="font-size:11px;color:var(--ink3)">${esc(fmtDateTime(m.doneTs||m.startTs))}</div></div></div>`;
+      const running=(m.startTs!=null && m.doneTs==null);
+      const done=(m.doneTs!=null);
+      const paused=(!running && !done && (m.accumMs||0)>0);
+      const worked=workedMs(m);
+      const icon=done?'✅':running?'🟠':paused?'⏸':'⚪';
+      const tail=done?` · ⏱ ${fmtDur2(worked)}`:running?' · ⏱ running…':paused?` · ⏱ ${fmtDur2(worked)} (paused)`:' · not started';
+      return `<div class="tm-act-item">${icon} <div><b>${esc(m.text)}</b><div style="font-size:11px;color:var(--ink3)">${esc(fmtDateTime(m.doneTs||m.startTs||t.createdTs))}${tail}</div></div></div>`;
     }).join('');
     el.innerHTML=items||'<div class="tm-empty">No activity yet.</div>'; }
   function renderThread(t){
@@ -17464,7 +17563,7 @@ function startLiveClock() {
       createdByDirector:isDir, directorUnseen:isDir,
       createdBy: isDir?'Md Fahim (Director)':EMP.name,
       createdTs: now,
-      milestones:[{text:'Task Created', startTs:now, doneTs:now, marker:true}],
+      milestones:[{text:'Task Created', startTs:now, doneTs:now, marker:true, accumMs:0}],
       assignees:[EMP.initials], links:[], attach:[], labels:[],
       start:'', due:null, feedback:[]
     });
