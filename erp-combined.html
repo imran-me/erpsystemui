@@ -16986,6 +16986,12 @@ function startLiveClock() {
   .pf-prog-track{flex:1;height:6px;border-radius:5px;background:#eef0f6;overflow:hidden;}
   .pf-prog-track>span{display:block;height:100%;background:linear-gradient(90deg,#7c3aed,#16a34a);border-radius:5px;transition:width .3s;}
   .pf-prog-n{font-size:10.5px;font-weight:700;color:var(--ink2);min-width:34px;text-align:right;}
+  /* overlapping assignee avatars on cards */
+  .pf-avs{display:inline-flex;margin-left:auto;}
+  .pf-avs .pf-cav{width:19px;height:19px;border-radius:50%;color:#fff;font-size:8px;font-weight:700;
+    display:inline-flex;align-items:center;justify-content:center;border:1.5px solid #fff;margin-left:-6px;}
+  .pf-avs .pf-cav:first-child{margin-left:0;}
+  .pf-card-foot .pf-avs+.due{margin-left:10px;}
 </style>
 </head>
 <body>
@@ -17132,6 +17138,17 @@ function startLiveClock() {
     </div>
   </div>
 
+  <!-- Lightweight inline prompt (replaces native prompt() for links / attachments) -->
+  <div class="pf-modal" id="inputModal" style="z-index:60" onclick="if(event.target===this)closeInput()">
+    <div class="pf-modal-box" style="width:420px;">
+      <div class="pf-modal-h"><div id="imTitle" style="font-size:16px;font-weight:700;">Add</div><button class="x" onclick="closeInput()">✕</button></div>
+      <div class="pf-modal-b">
+        <div class="pf-field" style="margin-bottom:0;"><input id="imInput" placeholder="" onkeydown="if(event.key==='Enter')imOk(); if(event.key==='Escape')closeInput();"></div>
+      </div>
+      <div class="pf-modal-foot"><button class="pf-rec" onclick="closeInput()">Cancel</button><button class="pf-send" onclick="imOk()">Add</button></div>
+    </div>
+  </div>
+
 <script>
   const EMP = __EMP_PAYLOAD__;
   const STATUSES = [
@@ -17268,6 +17285,8 @@ function startLiveClock() {
     const ms  = realMsCount(t);
     const pct = ms ? progressPct(t) : 0;
     const prog = ms ? `<div class="pf-prog" title="${ms} milestone${ms>1?'s':''}"><div class="pf-prog-track"><span style="width:${Math.min(100,pct)}%"></span></div><span class="pf-prog-n">${fmtPct(pct)}</span></div>` : '';
+    const av = (t.assignees||[]).map(i=>{ const r=ROSTER.find(x=>x.i===i); const c=r?r.c:'#94a3b8';
+      return `<span class="pf-cav" style="background:${c}" title="${esc(r?r.n:i)}">${esc(i)}</span>`; }).join('');
     const label = t.createdByDirector
       ? '<span class="pf-tag director">👑 Created by Director</span>'
       : '<span class="pf-tag ops">Operational</span>';
@@ -17280,6 +17299,7 @@ function startLiveClock() {
       ${prog}
       <div class="pf-card-foot">
         <span>💬 ${cmt}</span><span>🎙 ${vc}</span>${ms?`<span>🗺 ${ms}</span>`:''}
+        ${av?`<span class="pf-avs">${av}</span>`:''}
         ${t.due?`<span class="due">📅 ${esc(fmtShort(t.due))}</span>`:''}
       </div>
     </div>`;
@@ -17358,7 +17378,7 @@ function startLiveClock() {
       let badge='';
       if(running)      badge=`<span class="tm-live" id="tmLiveTimer">⏱ ${fmtLive(worked)}</span><span class="tm-inprog">● In progress</span>`;
       else if(done)    badge=`<span class="tm-worked">✓ Worked ${fmtDur2(worked)}</span>`;
-      else if(paused)  badge=`<span class="tm-paused">⏸ Paused · ${fmtDur2(worked)}</span>`;
+      else if(paused)  badge=`<span class="tm-paused">${m.autoPaused?'⏸ Auto-paused':'⏸ Paused'} · ${fmtDur2(worked)}</span>`;
       else             badge=`<span class="tm-pending-b">○ Not started</span>`;
       // per-milestone weight field (blank placeholder = auto split)
       const eff=w[i]||0;
@@ -17370,7 +17390,7 @@ function startLiveClock() {
       if(running)      ctrls=`<button class="tm-done-btn" onclick="milestoneDone(${i})">✓ Mark Done</button>`;
       else if(paused)  ctrls=`<button class="tm-start-btn" onclick="milestoneStart(${i})">▶ Resume</button><button class="tm-done-btn" onclick="milestoneDone(${i})">✓ Mark Done</button>`;
       else if(!done)   ctrls=`<button class="tm-start-btn" onclick="milestoneStart(${i})">▶ Start</button>`;
-      const when = running ? ('Started '+fmtDateTime(m.startTs)) : done ? ('Done '+fmtDateTime(m.doneTs)) : paused ? 'Paused — resume to continue' : 'Planned · not started';
+      const when = running ? ('Started '+fmtDateTime(m.startTs)) : done ? ('Done '+fmtDateTime(m.doneTs)) : paused ? (m.autoPaused?'Auto-paused — the tab was closed; resume to continue':'Paused — resume to continue') : 'Planned · not started';
       return `<div class="${cls}">
         <div class="t"><span class="tm-ttl">${esc(m.text)}</span>${badge}</div>
         <div class="tm-node-meta"><span class="d">${esc(when)}</span>${pctField}</div>
@@ -17400,9 +17420,9 @@ function startLiveClock() {
     const m=t.milestones[i]; if(m.marker||m.doneTs!=null) return;
     const now=Date.now();
     t.milestones.forEach((o,j)=>{ if(j!==i && !o.marker && o.startTs!=null && o.doneTs==null){ o.accumMs=(o.accumMs||0)+(now-o.startTs); o.startTs=null; } });
-    m.startTs=now;
+    m.startTs=now; m.autoPaused=false;
     if(t.status==='todo') t.status='inprogress';   // working on it → move off the To-Do column
-    save(); renderMap(t); renderActivity(t); render();
+    save(); beat(); renderMap(t); renderActivity(t); render();
   }
   function milestoneDone(i){
     const t=tasks.find(x=>x.id===openId); if(!t||!t.milestones[i]) return;
@@ -17433,18 +17453,56 @@ function startLiveClock() {
     el.textContent='⏱ '+fmtLive(workedMs(t.milestones[ai]));
   }
 
+  // ---- Idle-cap: a "heartbeat" records the last moment the app was alive, so a timer
+  //      left running while the tab is closed / the laptop sleeps doesn't over-count. ----
+  const BEAT_KEY = LSKEY + '_beat';
+  const IDLE_GAP = 5*60*1000;   // gap before we treat a running timer as abandoned (5 min)
+  function anyRunning(){ return tasks.some(t=>(t.milestones||[]).some(m=>!m.marker && m.startTs!=null && m.doneTs==null)); }
+  function beat(){ try{ if(anyRunning()) localStorage.setItem(BEAT_KEY, ''+Date.now()); }catch(e){} }
+  setInterval(beat, 15000);     // foreground heartbeat every 15s while a timer runs
+  // On load / regaining focus, discard untracked time past the last heartbeat and auto-pause.
+  function reconcileTimers(){
+    let last=0; try{ last=+localStorage.getItem(BEAT_KEY)||0; }catch(e){}
+    if(!last) return;
+    const now=Date.now(); if(now-last <= IDLE_GAP) return;   // app was alive recently — timers are fine
+    let changed=false;
+    tasks.forEach(t=>{ normMs(t); (t.milestones||[]).forEach(m=>{
+      if(!m.marker && m.startTs!=null && m.doneTs==null){
+        m.accumMs=(m.accumMs||0)+Math.max(0, last-m.startTs);   // keep only the time we actually observed
+        m.startTs=null; m.autoPaused=true;                       // auto-pause; user resumes when back
+        changed=true;
+      }
+    }); });
+    if(changed){ save(); }
+  }
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden){ reconcileTimers(); if(openId){const t=tasks.find(x=>x.id===openId); if(t)renderMap(t);} render(); } });
+
   // ---- Description ----
   function saveDesc(){ const t=tasks.find(x=>x.id===openId); if(!t)return; t.desc=document.getElementById('tmDescEdit').innerHTML; save(); render(); }
 
   // ---- Links / attachments ----
   function renderLinks(t){ const el=document.getElementById('tmLinks'); document.getElementById('tmLinkCt').textContent=(t.links||[]).length;
     el.innerHTML=(t.links&&t.links.length)? t.links.map((l,i)=>`<div class="tm-li"><a href="${esc(l)}" target="_blank" rel="noopener">🔗 ${esc(l)}</a><span class="x" onclick="delLink(${i})">✕</span></div>`).join('') : '<div class="tm-empty">No links yet</div>'; }
-  function addLink(){ const t=tasks.find(x=>x.id===openId); if(!t)return; const u=prompt('Paste a link (URL):'); if(!u)return; t.links=t.links||[]; t.links.push(u.trim()); save(); renderLinks(t); }
+  function addLink(){ const t=tasks.find(x=>x.id===openId); if(!t)return;
+    promptModal('🔗 Add link','https://…',function(u){ t.links=t.links||[]; t.links.push(u); save(); renderLinks(t); }); }
   function delLink(i){ const t=tasks.find(x=>x.id===openId); if(t&&t.links){ t.links.splice(i,1); save(); renderLinks(t); } }
   function renderAttach(t){ const el=document.getElementById('tmAtt'); document.getElementById('tmAttCt').textContent=(t.attach||[]).length;
     el.innerHTML=(t.attach&&t.attach.length)? t.attach.map((a,i)=>`<div class="tm-li"><span>📎 ${esc(a)}</span><span class="x" onclick="delAttach(${i})">✕</span></div>`).join('') : '<div class="tm-empty">No attachments yet</div>'; }
-  function addAttach(){ const t=tasks.find(x=>x.id===openId); if(!t)return; const n=prompt('Attachment name (e.g. plan.pdf):'); if(!n)return; t.attach=t.attach||[]; t.attach.push(n.trim()); save(); renderAttach(t); }
+  function addAttach(){ const t=tasks.find(x=>x.id===openId); if(!t)return;
+    promptModal('📎 Attach file','e.g. plan.pdf',function(n){ t.attach=t.attach||[]; t.attach.push(n); save(); renderAttach(t); }); }
   function delAttach(i){ const t=tasks.find(x=>x.id===openId); if(t&&t.attach){ t.attach.splice(i,1); save(); renderAttach(t); } }
+
+  // ---- Lightweight inline prompt modal (replaces native prompt()) ----
+  let imCb=null;
+  function promptModal(title, placeholder, cb){
+    imCb=cb;
+    document.getElementById('imTitle').textContent=title;
+    const inp=document.getElementById('imInput'); inp.value=''; inp.placeholder=placeholder||'';
+    document.getElementById('inputModal').classList.add('open');
+    setTimeout(()=>inp.focus(),30);
+  }
+  function closeInput(){ document.getElementById('inputModal').classList.remove('open'); imCb=null; }
+  function imOk(){ const v=document.getElementById('imInput').value.trim(); const cb=imCb; closeInput(); if(cb&&v) cb(v); }
 
   // ---- Properties ----
   function setState(){ const t=tasks.find(x=>x.id===openId); if(t){ t.status=document.getElementById('tmState').value; save(); render(); } }
@@ -17600,6 +17658,7 @@ function startLiveClock() {
   function openProfileSheet(){ buildSheet(); document.getElementById('profileModal').classList.add('open'); }
   function closeProfileSheet(){ document.getElementById('profileModal').classList.remove('open'); }
 
+  reconcileTimers();   // cap any timer that was left running while the app was closed
   setRole('director');
   render();
 <\/script>
@@ -19009,6 +19068,37 @@ function startLiveClock() {
   // ---------- Kanban helpers (mutations persist + refresh board / drawer) ----------
   function kbUpdate(id,refreshDrawer){ kbSave(); kbRefresh(); if(refreshDrawer && kbOpenId===id){ const b=document.getElementById('kb-drawer-body'); const t=kbTask(id); if(b&&t) b.innerHTML=kbDrawerBody(t); } }
 
+  // ---------- Inline prompt modal (replaces native prompt(); built lazily) ----------
+  let _kbPromptEl=null, _kbPromptCb=null;
+  function kbPrompt(title, ph, cb){
+    _kbPromptCb=cb;
+    if(!_kbPromptEl){
+      const o=document.createElement('div');
+      o.style.cssText='position:fixed;inset:0;z-index:1600;display:none;align-items:center;justify-content:center;background:rgba(15,23,42,.45);';
+      o.innerHTML='<div style="background:var(--bg2);border-radius:14px;width:420px;max-width:92vw;box-shadow:0 30px 70px rgba(0,0,0,.3);overflow:hidden;font-family:inherit;">'
+        +'<div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;">'
+        +'<span id="kb-prompt-title" style="font-size:15px;font-weight:700;color:var(--text);">Add</span>'
+        +'<button id="kb-prompt-x" style="margin-left:auto;border:0;background:var(--bg3);width:28px;height:28px;border-radius:8px;cursor:pointer;color:var(--text2);">✕</button></div>'
+        +'<div style="padding:18px 20px;"><input id="kb-prompt-input" style="width:100%;border:1px solid var(--border);border-radius:9px;padding:10px 12px;font-size:13px;font-family:inherit;color:var(--text);outline:none;"></div>'
+        +'<div style="padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;">'
+        +'<button id="kb-prompt-cancel" style="border:1px solid var(--border);background:var(--bg3);border-radius:9px;padding:9px 16px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--text);">Cancel</button>'
+        +'<button id="kb-prompt-ok" style="border:0;background:var(--accent);color:#fff;border-radius:9px;padding:9px 18px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;">Add</button></div></div>';
+      document.body.appendChild(o);
+      const close=()=>{ o.style.display='none'; _kbPromptCb=null; };
+      const ok=()=>{ const v=o.querySelector('#kb-prompt-input').value.trim(); const cb=_kbPromptCb; close(); if(cb&&v) cb(v); };
+      o.addEventListener('click',e=>{ if(e.target===o) close(); });
+      o.querySelector('#kb-prompt-x').onclick=close;
+      o.querySelector('#kb-prompt-cancel').onclick=close;
+      o.querySelector('#kb-prompt-ok').onclick=ok;
+      o.querySelector('#kb-prompt-input').addEventListener('keydown',e=>{ if(e.key==='Enter')ok(); if(e.key==='Escape')close(); });
+      _kbPromptEl=o;
+    }
+    _kbPromptEl.querySelector('#kb-prompt-title').textContent=title;
+    const inp=_kbPromptEl.querySelector('#kb-prompt-input'); inp.value=''; inp.placeholder=ph||'';
+    _kbPromptEl.style.display='flex';
+    setTimeout(()=>inp.focus(),30);
+  }
+
   // ---------- Public API ----------
   window.EpalESS = {
     show, activate, deactivate, home, openCompany, isEss:id=>!!RENDER[id],
@@ -19041,9 +19131,9 @@ function startLiveClock() {
     kbAddLabel(id,txt){ txt=(txt||'').trim(); if(!txt) return; const t=kbTask(id); if(!t) return; t.labels=t.labels||[];
       const c=KB_LABEL_COLORS[t.labels.length % KB_LABEL_COLORS.length]; t.labels.push({t:txt,c}); kbUpdate(id,true); },
     kbDelLabel(id,ix){ const t=kbTask(id); if(t&&t.labels){ t.labels.splice(ix,1); kbUpdate(id,true); } },
-    kbAddLink(id){ const u=prompt('Paste a link (URL):'); if(!u) return; const t=kbTask(id); if(!t) return; t.links=t.links||[]; t.links.push(u.trim()); kbUpdate(id,true); },
+    kbAddLink(id){ const t=kbTask(id); if(!t) return; kbPrompt('🔗 Add link','https://…',u=>{ t.links=t.links||[]; t.links.push(u); kbUpdate(id,true); }); },
     kbDelLink(id,ix){ const t=kbTask(id); if(t&&t.links){ t.links.splice(ix,1); kbUpdate(id,true); } },
-    kbAddAttach(id){ const n=prompt('Attachment name (e.g. design.pdf):'); if(!n) return; const t=kbTask(id); if(!t) return; t.attach=t.attach||[]; t.attach.push(n.trim()); kbUpdate(id,true); },
+    kbAddAttach(id){ const t=kbTask(id); if(!t) return; kbPrompt('📎 Attach file','e.g. design.pdf',n=>{ t.attach=t.attach||[]; t.attach.push(n); kbUpdate(id,true); }); },
     kbDelAttach(id,ix){ const t=kbTask(id); if(t&&t.attach){ t.attach.splice(ix,1); kbUpdate(id,true); } },
     kbTab(btn,pane){ const dr=document.getElementById('kb-drawer'); if(!dr) return;
       dr.querySelectorAll('.kb-tab').forEach(b=>b.classList.remove('active')); btn.classList.add('active');
