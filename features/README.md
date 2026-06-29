@@ -36,3 +36,5 @@ TP.onReady(cb)         // run registration safely
 ## Features
 - **quotation/** — Quotation Builder: multi-line quotes (flight/visa/hotel/transfer),
   live profit & VAT calc, mock WhatsApp send, convert-to-booking, print/PDF.
+- **states/** — States master (state/province per country). Full CRUD via
+  `registerResource`; example of the smallest possible feature.

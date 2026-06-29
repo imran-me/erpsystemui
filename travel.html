@@ -688,7 +688,7 @@ function renderTable(r){
     const extra=(r.rowActions||[]).map(a=>`<button class="tbtn" title="${esc(a.label)}" onclick="TR.action('${r.key}','${a.key}','${row.id}')">${a.icon}</button>`).join('');
     return `<tr>${tds}<td style="text-align:right;white-space:nowrap">${extra}<button class="tbtn" title="Edit" onclick="TR.edit('${r.key}','${row.id}')">✏️</button><button class="tbtn danger" title="Delete" onclick="TR.del('${r.key}','${row.id}')">🗑</button></td></tr>`;
   }).join('')||`<tr><td class="empty" colspan="${cols.length+1}">No records yet. Click “＋ New” to add one.</td></tr>`;
-  $('content').innerHTML=`<div class="ph"><div><h2>${esc(r.title)}</h2><div class="sub">${esc(r.sub||'')}</div></div></div>
+  $('content').innerHTML=`<div class="ph"><div><h2>${esc(r.title)}${r.nw?' <span class="badge-new">New</span>':''}</h2><div class="sub">${esc(r.sub||'')}</div></div></div>
     ${toolbar(r)}
     <div class="card"><table class="tbl"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
   const ct=$('tb-ct'); if(ct) ct.textContent=data.length+' record'+(data.length===1?'':'s');
@@ -713,7 +713,7 @@ function renderBoard(r){
     return `<div class="kcol" ondragover="TR.kover(event,this)" ondragleave="this.classList.remove('over')" ondrop="TR.kdrop(event,'${r.key}','${s.k}',this)">
       <div class="kcol-h"><span class="kdot" style="background:${s.c}"></span>${esc(s.t)}<span class="kct">${items.length}</span></div>${cards}</div>`;
   }).join('');
-  $('content').innerHTML=`<div class="ph"><div><h2>${esc(r.title)}</h2><div class="sub">${esc(r.sub||'')}</div></div>
+  $('content').innerHTML=`<div class="ph"><div><h2>${esc(r.title)}${r.nw?' <span class="badge-new">New</span>':''}</h2><div class="sub">${esc(r.sub||'')}</div></div>
     <div class="ph-r"><div class="search" style="min-width:200px;position:relative"><input id="tb-search" placeholder="Search applicants…" value="${esc(ui(r.key).q)}" oninput="TR.search('${r.key}',this.value)" style="width:100%;border:1px solid var(--border2);background:var(--bg2);border-radius:9px;padding:9px 12px;font-size:13px;font-family:inherit;outline:none;"></div>
     <button class="btn primary" onclick="TR.openNew('${r.key}')">＋ New Application</button></div></div>
     <div class="kanban">${cols}</div>`;
@@ -961,6 +961,7 @@ show('dashboard');
 
 <!-- ════ MODULAR FEATURES (each self-contained in /features/<name>/) · New ════ -->
 <script src="features/quotation/quotation.js"></script>
+<script src="features/states/states.js"></script>
 
 <!-- ════ EON AI COMPANION — modular 3D assistant (/ai-companion) · New ════ -->
 <script type="module" src="ai-companion/js/main.js"></script>
