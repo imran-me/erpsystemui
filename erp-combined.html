@@ -5,6 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EPAL ERP — Enterprise Suite</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<!-- ════ EON AI COMPANION (modular — lives in /ai-companion) · New ════ -->
+<script type="importmap">
+{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+</script>
+<link rel="stylesheet" href="ai-companion/css/companion.css">
+<link rel="stylesheet" href="ai-companion/css/home.css">
+<link rel="stylesheet" href="ai-companion/css/animations.css">
+
 <style>
 :root {
   --bg: #f4f6fb;
@@ -19254,6 +19263,9 @@ function startLiveClock() {
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init); else init();
 })();
 </script>
+
+<!-- ════ EON AI COMPANION — modular 3D assistant (/ai-companion) · New ════ -->
+<script type="module" src="ai-companion/js/main.js"></script>
 
 </body>
 </html>
