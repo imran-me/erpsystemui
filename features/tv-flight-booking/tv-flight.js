@@ -16,6 +16,10 @@ var TRIPS=['One-way','Return'];
 var PAXT=['Adult','Child','Infant'];
 var BST={Confirmed:'#16a34a',Hold:'#d97706',Voided:'#94a3b8',Refunded:'#7c3aed','Re-issued':'#2563eb',Cancelled:'#dc2626'};
 var TST={Issued:'#16a34a',Unissued:'#94a3b8',Refunded:'#7c3aed',Void:'#dc2626'};
+/* Add-on services pulled from the shared "Other Services" catalog (additives on the invoice) */
+function svcCatalog(){try{var r=localStorage.getItem('epal_tv_other_services');if(r){return JSON.parse(r).filter(function(s){return s.active;});}}catch(e){}
+  return [{id:'d1',name:'Passport Processing',price:3000},{id:'d2',name:'Bank Statement / Solvency',price:2000},{id:'d3',name:'Travel Insurance',price:1500},{id:'d4',name:'Airport Transfer',price:2000},{id:'d5',name:'Visa Attestation',price:2500}];}
+function addonTotal(list){return (list||[]).reduce(function(a,x){return a+(+x.price||0)*(+x.qty||1);},0);}
 
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c];});}
 function money(n){return '৳ '+Number(n||0).toLocaleString('en-IN');}
@@ -101,7 +105,9 @@ function bookForm(r){
       +'<td><input data-pk="name" value="'+esc(p.name)+'" placeholder="Full name (as in passport)" style="width:100%"></td>'
       +'<td><input data-pk="passport" value="'+esc(p.passport)+'" placeholder="Passport no" style="width:140px"></td></tr>';
   }).join('');
-  var sub=f.fare*draft.pax.length, tax=f.taxes*draft.pax.length, grand=sub+tax;
+  var sub=f.fare*draft.pax.length, tax=f.taxes*draft.pax.length, addo=addonTotal(draft.addons), grand=sub+tax+addo;
+  var cat=svcCatalog();
+  var addRows=(draft.addons||[]).map(function(a,i){return '<div class="tvf-addon-row"><span>'+esc(a.name)+' × '+(a.qty||1)+'</span><span class="mono">'+money((a.price||0)*(a.qty||1))+'</span><button class="tvf-op" title="Remove" onclick="tvfDelSvc('+i+')">✕</button></div>';}).join('')||'<div style="font-size:12px;color:var(--text3);padding:4px 0">No add-on services yet.</div>';
   r.innerHTML=''
    +'<div style="display:flex;gap:10px;align-items:center;margin-bottom:14px"><button class="erp-btn btn-ghost" onclick="tvfBackResults()">← Back to results</button></div>'
    +'<div class="tvf-card tvf-pad"><div class="tvf-h">✈️ Itinerary</div>'
@@ -110,6 +116,12 @@ function bookForm(r){
      +' &nbsp;·&nbsp; '+(f.refundable?'Refundable':'Non-refundable')+' &nbsp;·&nbsp; 🧳 '+esc(f.baggage)+'</div></div>'
    +'<div class="tvf-card tvf-pad"><div class="tvf-h">👥 Passengers ('+draft.pax.length+')</div>'
      +'<table class="tvf-tbl"><thead><tr><th>#</th><th>Type</th><th>Name</th><th>Passport</th></tr></thead><tbody>'+paxRows+'</tbody></table></div>'
+   +'<div class="tvf-card tvf-pad"><div class="tvf-h">➕ Add-on Services <span style="font-size:11px;color:var(--text3);font-weight:500">— other services on this invoice (passport, hotel, insurance…)</span></div>'
+     +'<div class="tvf-addons">'+addRows+'</div>'
+     +'<div class="tvf-addon-add"><select id="tvf-svc">'+cat.map(function(s){return '<option value="'+esc(s.id)+'">'+esc(s.name)+' — '+money(s.price)+'</option>';}).join('')+'</select>'
+       +'<input id="tvf-svc-qty" type="number" min="1" value="1" style="width:70px">'
+       +'<button class="erp-btn btn-sm btn-ghost" onclick="tvfAddSvc()">＋ Add service</button>'
+       +'<span style="font-size:11px;color:var(--text3);margin-left:auto;align-self:center">Manage catalog in “Other Services”</span></div></div>'
    +'<div class="tvf-two">'
      +'<div class="tvf-card tvf-pad"><div class="tvf-h">📇 Contact &amp; Vendor</div><div class="tvf-sgrid2">'
        +'<div class="tvf-f"><label>Customer</label><input id="tvf-cust" value="'+esc(draft.customer)+'" placeholder="Customer / company"></div>'
@@ -120,6 +132,7 @@ function bookForm(r){
      +'<div class="tvf-card tvf-pad"><div class="tvf-h">🧮 Fare Summary</div>'
        +'<div class="tvf-sumrow"><span>Base fare × '+draft.pax.length+'</span><span>'+money(sub)+'</span></div>'
        +'<div class="tvf-sumrow"><span>Taxes & surcharge</span><span>'+money(tax)+'</span></div>'
+       +'<div class="tvf-sumrow"><span>Add-on services</span><span>'+money(addo)+'</span></div>'
        +'<div class="tvf-sumrow tot"><span>Total Payable</span><span>'+money(grand)+'</span></div>'
        +'<button class="erp-btn btn-primary" style="width:100%;margin-top:12px" onclick="tvfConfirm()">✅ Create Booking</button></div>'
    +'</div>';
@@ -128,7 +141,7 @@ function bookForm(r){
 /* ---------- BOOKINGS LIST ---------- */
 function bookingsView(r){
   var rows=BOOKINGS.map(function(b){
-    var sub=b.fare*b.pax.length, grand=sub+b.taxes*b.pax.length;
+    var sub=b.fare*b.pax.length, grand=sub+b.taxes*b.pax.length+addonTotal(b.addons);
     return '<tr>'
       +'<td class="mono">'+esc(b.id)+'</td><td class="mono"><strong>'+esc(b.pnr)+'</strong></td>'
       +'<td><strong>'+esc(b.customer||'—')+'</strong><div style="font-size:11px;color:var(--text3)">'+esc(b.pax.length)+' pax</div></td>'
@@ -162,11 +175,13 @@ window.tvfSearch=function(){
   var rc=document.getElementById('tvf-results'); if(rc) rc.innerHTML=resultsHtml();
 };
 window.tvfBook=function(i){var f=results[i];
-  draft={flight:f,query:query,customer:'',phone:'',email:'',pax:[]};
+  draft={flight:f,query:query,customer:'',phone:'',email:'',pax:[],addons:[]};
   for(var p=0;p<query.pax;p++) draft.pax.push({type:p===0?'Adult':'Adult',name:'',passport:''});
   view='book'; render();
 };
 window.tvfBackResults=function(){view='search';render();};
+window.tvfAddSvc=function(){syncBook();var sel=document.getElementById('tvf-svc');var qe=document.getElementById('tvf-svc-qty');var qty=Math.max(1,+(qe&&qe.value)||1);if(!sel)return;var cat=svcCatalog();var s=cat.find(function(x){return x.id===sel.value;});if(!s)return;draft.addons.push({name:s.name,price:+s.price||0,qty:qty});render();};
+window.tvfDelSvc=function(i){syncBook();draft.addons.splice(i,1);render();};
 window.tvfGoBookings=function(){view='bookings';render();};
 window.tvfGoSearch=function(){view='search';render();};
 function syncBook(){var r=root();
@@ -181,9 +196,10 @@ window.tvfConfirm=function(){ syncBook();
   var issue=draft.mode==='Confirmed';
   var b={id:'TS-'+String(Date.now()).slice(-5),pnr:pnr(),customer:draft.customer,phone:draft.phone,email:draft.email,
     airline:f.airline,code:f.code,flightNo:f.flightNo,from:q.from,to:q.to,dep:f.dep,arr:f.arr,dur:f.dur,cabin:q.cabin,
-    fare:f.fare,taxes:f.taxes,refundable:f.refundable,pax:draft.pax,
+    fare:f.fare,taxes:f.taxes,refundable:f.refundable,pax:draft.pax,addons:draft.addons||[],
     bookingStatus:issue?'Confirmed':'Hold',ticketStatus:issue?'Issued':'Unissued',history:[]};
   b.history=[{at:stamp(),text:'Booking created (PNR '+b.pnr+').'}];
+  if((b.addons||[]).length) b.history.push({at:stamp(),text:'Add-on services: '+b.addons.map(function(a){return a.name+' ×'+(a.qty||1);}).join(', ')+' ('+money(addonTotal(b.addons))+').'});
   if(issue){ b.pax.forEach(function(p){p.tkt=tktNo();}); b.history.push({at:stamp(),text:'Ticket issued.'}); }
   BOOKINGS.unshift(b); save();
   alert('✅ Booking created\nPNR: '+b.pnr+'\nInvoice: '+b.id+(issue?'\nTickets issued.':'\nHeld (not yet issued).'));
@@ -242,7 +258,13 @@ function injectCss(){ if(document.getElementById('tvf-css'))return; var s=docume
   +P+'.tvf-sumrow{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px dashed var(--border);font-size:13px}'
   +P+'.tvf-sumrow.tot{font-weight:700;font-size:15px;border-bottom:none;border-top:2px solid var(--border);margin-top:6px;padding-top:10px}'
   +P+'.tvf-tl{display:flex;align-items:center;gap:9px;padding:5px 0;font-size:12.5px}'
-  +P+'.tvf-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0}';
+  +P+'.tvf-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0}'
+  +P+'.tvf-addons{margin-bottom:10px}'
+  +P+'.tvf-addon-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px dashed var(--border);font-size:13px}'
+  +P+'.tvf-addon-row span:first-child{flex:1}'
+  +P+'.tvf-addon-add{display:flex;gap:9px;flex-wrap:wrap;margin-top:8px}'
+  +P+'.tvf-addon-add select,'+P+'.tvf-addon-add input{border:1px solid var(--border2,#d0d6e8);background:var(--bg);border-radius:9px;padding:8px 11px;font-size:13px;font-family:inherit;color:var(--text);outline:none}'
+  +P+'.tvf-addon-add select{min-width:240px}';
   document.head.appendChild(s);
 }
 function boot(){ var r=root(); if(r){render();} else {document.addEventListener('DOMContentLoaded',render);} }
