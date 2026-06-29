@@ -4407,6 +4407,7 @@ label{font-size:11px;color:var(--text2);display:block;margin-bottom:5px;font-wei
       <div class="erp-nav" onclick="showErpPanel('tv-bsp',event.currentTarget)"><span class="erp-nav-icon">📑</span> BSP / ADM Recon <span class="erp-nav-badge" style="background:#16a34a;color:#fff">New</span></div>
       <div class="erp-nav" onclick="showErpPanel('tv-accounts',event.currentTarget)"><span class="erp-nav-icon">📒</span> Vendor / Agent Accounts <span class="erp-nav-badge" style="background:#16a34a;color:#fff">New</span></div>
       <div class="erp-nav" onclick="showErpPanel('tv-commission',event.currentTarget)"><span class="erp-nav-icon">💼</span> Commission <span class="erp-nav-badge" style="background:#16a34a;color:#fff">New</span></div>
+      <div class="erp-nav" onclick="showErpPanel('tv-integrations',event.currentTarget)"><span class="erp-nav-icon">🔌</span> Integrations / API <span class="erp-nav-badge" style="background:#16a34a;color:#fff">New</span></div>
 
       <div class="sub-section-label">⚙ OPERATIONS</div>
       <div class="erp-nav" onclick="toggleSubmenu(this,'sub-tv-vendor')"><span class="erp-nav-icon">👥</span> Vendor &amp; Agent <span class="erp-nav-arrow">›</span></div>
@@ -10596,7 +10597,7 @@ const erpPanels = [
   'tv-vendor-add','tv-vendor-manage','tv-agent-add','tv-agent-manage',
   'tv-portal-add','tv-portal-manage',
   // Travels — Services
-  'tv-tasks','tv-quotation','tv-flight','tv-bsp','tv-accounts','tv-commission','tv-ticket-manage','tv-ticket-direct','tv-ticket-sales','tv-invoice','tv-ticket-airport','tv-ticket-airline','tv-ticket-country','tv-ticket-states','tv-cf-schedule','tv-cf-add','tv-cf-manage','tv-cf-category','tv-cf-sales',
+  'tv-tasks','tv-quotation','tv-flight','tv-bsp','tv-accounts','tv-commission','tv-integrations','tv-ticket-manage','tv-ticket-direct','tv-ticket-sales','tv-invoice','tv-ticket-airport','tv-ticket-airline','tv-ticket-country','tv-ticket-states','tv-cf-schedule','tv-cf-add','tv-cf-manage','tv-cf-category','tv-cf-sales',
   'tv-visa-board','tv-visa-new','tv-visa-cat','tv-visa-docs','tv-visa-sales','tv-visa-invoice','tv-visa-others',
   'tv-file-cyprus','tv-file-add','tv-file-slot',
   // Data Management (MD: 11-Jun-2026)
@@ -10615,7 +10616,7 @@ const erpTitles = {
   'co-epalgroup':'Epal Group','co-it':'Epal It Solutions','co-properties':'Epal Properties','co-construction':'Epal Constructions','co-woodart':'Wood Art Interiors','co-travels':'Epal Travels','co-onlineshop':'Epal Online Shop','co-manufacturing':'Epal Manufacturing',
   'tv-vendor-add':'Add Vendor','tv-vendor-manage':'Manage Vendors','tv-agent-add':'Add Agent','tv-agent-manage':'Manage Agents',
   'tv-portal-add':'Add Portal','tv-portal-manage':'Manage Portals',
-  'tv-tasks':'Task Board','tv-quotation':'Quotation Builder','tv-flight':'Flight Booking','tv-bsp':'BSP / ADM Reconciliation','tv-accounts':'Vendor / Agent Accounts','tv-commission':'Commission Management','tv-ticket-manage':'Manage Tickets','tv-ticket-direct':'Ticketing','tv-ticket-sales':'Manage Sales','tv-invoice':'Invoice Template','tv-ticket-airport':'Airport Management','tv-ticket-airline':'Airlines','tv-ticket-country':'Country','tv-ticket-states':'States','tv-cf-schedule':'Flight Schedule','tv-cf-add':'Add Contract Flight','tv-cf-manage':'Manage Contract Flight','tv-cf-category':'Flight Category','tv-cf-sales':'Flight Sales & Bookings',
+  'tv-tasks':'Task Board','tv-quotation':'Quotation Builder','tv-flight':'Flight Booking','tv-bsp':'BSP / ADM Reconciliation','tv-accounts':'Vendor / Agent Accounts','tv-commission':'Commission Management','tv-integrations':'Integrations / API','tv-ticket-manage':'Manage Tickets','tv-ticket-direct':'Ticketing','tv-ticket-sales':'Manage Sales','tv-invoice':'Invoice Template','tv-ticket-airport':'Airport Management','tv-ticket-airline':'Airlines','tv-ticket-country':'Country','tv-ticket-states':'States','tv-cf-schedule':'Flight Schedule','tv-cf-add':'Add Contract Flight','tv-cf-manage':'Manage Contract Flight','tv-cf-category':'Flight Category','tv-cf-sales':'Flight Sales & Bookings',
   'tv-visa-board':'Visa Application Board','tv-visa-new':'New Visa Application','tv-visa-cat':'Visa Categories','tv-visa-docs':'Visa Documents','tv-visa-sales':'Visa — Manage Sales','tv-visa-invoice':'Visa Invoice Template','tv-visa-others':'Visa — Other Services',
   'tv-file-cyprus':'Cyprus File Tracker','tv-file-add':'Add Cyprus File','tv-file-slot':'Embassy Slot Tracker',
   // Data Management (MD: 11-Jun-2026)
@@ -14079,7 +14080,7 @@ function startLiveClock() {
   const G = {
     companies:['co-epalgroup','co-it','co-properties','co-construction','co-woodart','co-travels','co-onlineshop','co-manufacturing'],
     tvOps:['tv-vendor-add','tv-vendor-manage','tv-agent-add','tv-agent-manage','tv-portal-add','tv-portal-manage'],
-    tvSvc:['tv-tasks','tv-quotation','tv-flight','tv-bsp','tv-accounts','tv-commission','tv-ticket-direct','tv-ticket-sales','tv-ticket-airline','tv-ticket-airport','tv-ticket-country','tv-ticket-states','tv-cf-schedule','tv-cf-add','tv-cf-category','tv-cf-sales','tv-cf-manage','tv-visa-cat','tv-visa-new','tv-visa-board','tv-visa-sales','tv-visa-others','tv-file-cyprus','tv-file-add','tv-file-slot'],
+    tvSvc:['tv-tasks','tv-quotation','tv-flight','tv-bsp','tv-accounts','tv-commission','tv-integrations','tv-ticket-direct','tv-ticket-sales','tv-ticket-airline','tv-ticket-airport','tv-ticket-country','tv-ticket-states','tv-cf-schedule','tv-cf-add','tv-cf-category','tv-cf-sales','tv-cf-manage','tv-visa-cat','tv-visa-new','tv-visa-board','tv-visa-sales','tv-visa-others','tv-file-cyprus','tv-file-add','tv-file-slot'],
     tvData:['tv-data-dashboard','tv-data-country','tv-data-area','tv-data-company','tv-data-category','tv-data-custtype','tv-data-customer','tv-data-import','tv-data-visa','tv-data-ticket','tv-data-contract','tv-data-file','tv-data-atab','tv-data-toab','tv-data-email','tv-data-sms','tv-data-wa'],
     userMgmt:['um-add','um-all-users','um-emp-docs','um-promotions'],
     bizProd:['biz-unit','biz-brand','biz-cat','biz-subcat','biz-products','biz-companies','biz-discount'],
