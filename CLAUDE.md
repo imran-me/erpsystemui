@@ -10,25 +10,25 @@ The owner ("the boss") / stakeholder is **MD**; many design decisions are tagged
 ## Files
 | File | Size | Purpose |
 |------|------|---------|
-| [erp-combined.html](erp-combined.html) | ~19,300 lines (1.5 MB) | **The main app.** Entire ERP: all CSS, all HTML panels, all JS in one file. |
-| [travel.html](travel.html) | ~900 lines | **Epal Travels — Employee Portal** (separate standalone page, employee-facing). |
-| [index.html](index.html) | tiny | Redirect → `erp-combined.html` (so the GitHub Pages root URL loads the app). |
-| [ai-companion/](ai-companion/) | ~14 MB | **EON** — modular 3D AI companion (Three.js). Self-contained; embedded in `travel.html`. |
-| [features/](features/) | — | **Modular features**, one folder each, plugged into `travel.html` via `window.TravelPortal`. |
+| [erp-combined.html](erp-combined.html) | ~15,300 lines | **The main app & single source of truth.** All CSS, JS, panels, RBAC. The Travel module's HTML now lives in `travel.html` and is injected here at runtime. |
+| [travel.html](travel.html) | ~3,980 lines | **Travel module — HTML fragment** (the `tv-*` panels). Extracted verbatim from `erp-combined.html`. NOT a standalone page (no html/head/body). Injected into combined at parse time. |
+| [erp-combined.backup.html](erp-combined.backup.html) | — | Local pre-extraction backup (gitignored; git history also has it). |
+| [index.html](index.html) | tiny | Redirect → `erp-combined.html`. |
+| [ai-companion/](ai-companion/) | ~14 MB | **EON** — modular 3D AI companion (Three.js). Embedded in `erp-combined.html`. |
+| [features/](features/) | — | Earlier `window.TravelPortal`-based feature prototypes (Quotation, Tasks, Visa-Pro, Ticketing-Pro, Compliance, Expense, States). **Not currently wired** — to be re-added as native erp panels inside `travel.html`. |
+
+## Architecture: the Travel module split (MD: 29-Jun-2026)
+- **`erp-combined.html` is the ONE source of truth.** The Travel module's panel HTML was **extracted (moved, nothing deleted)** into `travel.html` to shrink combined.
+- `erp-combined.html` loads it back **in place during page parse**: a small inline loader does a synchronous `XMLHttpRequest` for `travel.html` and `document.write`s it into `.erp-content` exactly where the panels used to be. Result: identical DOM, IDs, events, JS and DB — the user cannot tell it's external. (Needs http(s); works on GitHub Pages, not `file://`.)
+- The Travel module's **CSS, JS, sidebar nav, RBAC entries (`erpPanels`/`erpTitles`/`G.tvSvc`) all stay in `erp-combined.html`** and are unchanged.
+- **Develop all Travel UI in `travel.html`** going forward (add new `.erp-panel#erp-panel-<id>` sections there); combined reflects them automatically. Any new nav item / `erpPanels` / `erpTitles` / RBAC entry for a new panel still goes in `erp-combined.html` (small one-liners).
 
 ## Prototyping rules (important)
-- This is **UI design only** — mock data + localStorage, no backend. Build screens & ideas.
-- **Every newly added thing gets a `New` badge** (`<span class="badge-new">New</span>`, or `nw:true` on nav helpers) so the user can see what changed.
-- New features are **modular**: their own folder under `features/`, self-contained, registered via `window.TravelPortal` (see [features/README.md](features/README.md)). Never edit the core engine to add a feature.
-- A feature must render **all its sections** so the user can do **test input** right away.
-- **Never delete** existing features/content.
-
-## Where new work goes (updated 2026-06-29)
-- **`erp-combined.html` is the real product.** It has a Role-Based Access (RBAC) "View As" switcher (`#rbac-system` script). Switching to **Travels Agent** (`agent` role) filters the sidebar to the Travels company + travel-service panels (`G.tvSvc`). Panels are `.erp-panel#erp-panel-<id>`, shown via `showErpPanel(id, navEl)`; registered in `erpPanels`/`erpTitles`; visibility gated by `canPanel(id)` per role.
-- **New travel features → build in `travel.html`** (modular via `window.TravelPortal`, each in its own `features/<name>/` folder). The whole suite is then surfaced **inside `erp-combined.html`** as the **Smart Suite** panel (`features/erp-travel-suite/suite.js`): a lazy iframe of `travel.html` mounted under the Travels menu, id `tv-suite`, allowed for the `agent` role. It appears when you switch role to **Travels Agent**.
-  - Why an iframe: `travel.html` reuses component classes (`.modal`, `.card`, `.kpi`, `.tbl`, `.btn`…) that `erp-combined.html` defines differently — embedding keeps both fully styled with zero CSS conflict. New `/features` show up automatically.
-  - To make a feature a **native** erp-combined sidebar item instead, it would need scoped CSS (a `.tps` wrapper) — larger refactor, not done yet.
-- **EON → every page.** Embedded in both `travel.html` and `erp-combined.html`. `index.html` is just a redirect. New top-level pages get the same embed (import-map + 3 CSS + module script).
+- This is **UI design only** — mock data + localStorage, no backend.
+- **Every newly added thing gets a `New` badge** so the user can see what changed.
+- **Never delete** existing Travel/ERP content — it mirrors the live operational system. Adding is fine; deleting is prohibited.
+- A new feature must render **all its sections** so the user can test-input immediately.
+- Switch role to **Travels Agent** (top-right "View As") to see the Travel section (RBAC-gated to `agent`/`admin`/`superadmin`).
 
 ## EON AI companion
 - Lives entirely in `ai-companion/`; embedded via an import-map (`three`) + 3 CSS links + `<script type="module" src="ai-companion/js/main.js">`.
