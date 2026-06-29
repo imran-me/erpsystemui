@@ -4401,19 +4401,8 @@ label{font-size:11px;color:var(--text2);display:block;margin-bottom:5px;font-wei
     <div class="erp-submenu" id="sub-travels">
       <!-- MD: Updated 06-May-2026: Grouped Operations + Services with nested sub-menus -->
       <div class="erp-nav" onclick="showErpPanel('co-travels',event.currentTarget)"><span class="erp-nav-icon">🏠</span> Company Dashboard</div>
-      <div class="erp-nav" onclick="showErpPanel('tv-analytics',event.currentTarget)"><span class="erp-nav-icon">📈</span> Analytics / MIS <span class="erp-nav-badge" style="background:#16a34a;color:#fff">New</span></div>
-      <div class="erp-nav" onclick="showErpPanel('tv-tasks',event.currentTarget)"><span class="erp-nav-icon">✅</span> Task Board <span class="erp-nav-badge" style="background:#16a34a;color:#fff">New</span></div>
 
-      <div class="sub-section-label">🤖 AUTOMATION</div>
-      <div class="erp-nav" onclick="showErpPanel('tv-docradar',event.currentTarget)"><span class="erp-nav-icon">📡</span> Document-Expiry Radar <span class="erp-nav-badge" style="background:#16a34a;color:#fff">New</span></div>
-      <div class="erp-nav" onclick="showErpPanel('tv-ocr',event.currentTarget)"><span class="erp-nav-icon">📷</span> OCR Document Vault <span class="erp-nav-badge" style="background:#16a34a;color:#fff">New</span></div>
-      <div class="erp-nav" onclick="showErpPanel('tv-wabot',event.currentTarget)"><span class="erp-nav-icon">💬</span> WhatsApp Booking Bot <span class="erp-nav-badge" style="background:#16a34a;color:#fff">New</span></div>
 
-      <div class="sub-section-label">🧠 INTELLIGENCE</div>
-      <div class="erp-nav" onclick="showErpPanel('tv-leak',event.currentTarget)"><span class="erp-nav-icon">💧</span> Profit Leak Detector <span class="erp-nav-badge" style="background:#16a34a;color:#fff">New</span></div>
-      <div class="erp-nav" onclick="showErpPanel('tv-sentinel',event.currentTarget)"><span class="erp-nav-icon">🛡</span> Fraud & Compliance Sentinel <span class="erp-nav-badge" style="background:#16a34a;color:#fff">New</span></div>
-      <div class="erp-nav" onclick="showErpPanel('tv-dna',event.currentTarget)"><span class="erp-nav-icon">🧬</span> Customer Travel-DNA <span class="erp-nav-badge" style="background:#16a34a;color:#fff">New</span></div>
-      <div class="erp-nav" onclick="showErpPanel('tv-coach',event.currentTarget)"><span class="erp-nav-icon">🎮</span> Agent Performance Coach <span class="erp-nav-badge" style="background:#16a34a;color:#fff">New</span></div>
 
       <div class="sub-section-label">⚙ OPERATIONS</div>
       <div class="erp-nav" onclick="toggleSubmenu(this,'sub-tv-vendor')"><span class="erp-nav-icon">👥</span> Vendor &amp; Agent <span class="erp-nav-arrow">›</span></div>
@@ -4474,21 +4463,46 @@ label{font-size:11px;color:var(--text2);display:block;margin-bottom:5px;font-wei
         <div class="erp-nav" onclick="showErpPanel('tv-umrah',event.currentTarget)"><span class="erp-nav-icon">🕋</span> Umrah / Hajj Group Orchestrator <span class="erp-nav-badge" style="background:#16a34a;color:#fff">New</span></div>
       </div>
 
+      <div class="erp-nav" onclick="toggleSubmenu(this,'sub-tv-hsvc')"><span class="erp-nav-icon">🧳</span> Hotels &amp; Services <span class="erp-nav-badge" style="background:#16a34a;color:#fff">New</span> <span class="erp-nav-arrow">›</span></div>
+      <div class="erp-submenu" id="sub-tv-hsvc">
+        <div class="erp-nav" onclick="showErpPanel('tv-hotels',event.currentTarget)"><span class="erp-nav-icon">🏨</span> Hotels &amp; Packages <span class="erp-nav-badge" style="background:#16a34a;color:#fff">New</span></div>
+        <div class="erp-nav" onclick="showErpPanel('tv-other-svc',event.currentTarget)"><span class="erp-nav-icon">🧩</span> Other Services <span class="erp-nav-badge" style="background:#16a34a;color:#fff">New</span></div>
+        <div class="erp-nav" onclick="showErpPanel('tv-itinerary',event.currentTarget)"><span class="erp-nav-icon">🧭</span> Living Itinerary <span class="erp-nav-badge" style="background:#16a34a;color:#fff">New</span></div>
+      </div>
+
       <div class="erp-nav" onclick="toggleSubmenu(this,'sub-tv-file')"><span class="erp-nav-icon">📁</span> File Management <span class="erp-nav-arrow">›</span></div>
       <div class="erp-submenu" id="sub-tv-file">
         <div class="erp-nav" onclick="showErpPanel('tv-file-cyprus',event.currentTarget)"><span class="erp-nav-icon">🇨🇾</span> Cyprus File Tracker</div>
         <div class="erp-nav" onclick="showErpPanel('tv-file-add',event.currentTarget)"><span class="erp-nav-icon">＋</span> Add File</div>
         <div class="erp-nav" onclick="showErpPanel('tv-file-slot',event.currentTarget)"><span class="erp-nav-icon">📊</span> Embassy Slot Tracker</div>
       </div>
-      <div class="erp-nav" onclick="showErpPanel('tv-hotels',event.currentTarget)"><span class="erp-nav-icon">🏨</span> Hotels &amp; Packages <span class="erp-nav-badge" style="background:#16a34a;color:#fff">New</span></div>
-      <div class="erp-nav" onclick="showErpPanel('tv-other-svc',event.currentTarget)"><span class="erp-nav-icon">🧩</span> Other Services <span class="erp-nav-badge" style="background:#16a34a;color:#fff">New</span></div>
-      <div class="erp-nav" onclick="showErpPanel('tv-itinerary',event.currentTarget)"><span class="erp-nav-icon">🧭</span> Living Itinerary Concierge <span class="erp-nav-badge" style="background:#16a34a;color:#fff">New</span></div>
 
-      <div class="sub-section-label">🔧 SETUP</div>
-      <div class="erp-nav" onclick="showErpPanel('tv-integrations',event.currentTarget)"><span class="erp-nav-icon">🔌</span> Integrations / API <span class="erp-nav-badge" style="background:#16a34a;color:#fff">New</span></div>
-      <div class="erp-nav" onclick="showErpPanel('tv-fx',event.currentTarget)"><span class="erp-nav-icon">💱</span> Currency / FX <span class="erp-nav-badge" style="background:#16a34a;color:#fff">New</span></div>
-      <div class="erp-nav" onclick="showErpPanel('tv-markup',event.currentTarget)"><span class="erp-nav-icon">🎚</span> Dynamic Markup Engine <span class="erp-nav-badge" style="background:#16a34a;color:#fff">New</span></div>
-      <div class="erp-nav" onclick="showErpPanel('tv-fxguard',event.currentTarget)"><span class="erp-nav-icon">🛟</span> FX Exposure Guard <span class="erp-nav-badge" style="background:#16a34a;color:#fff">New</span></div>
+      <div class="sub-section-label">📊 INTELLIGENCE &amp; AUTOMATION</div>
+      <div class="erp-nav" onclick="toggleSubmenu(this,'sub-tv-intel')"><span class="erp-nav-icon">🧠</span> Intelligence <span class="erp-nav-badge" style="background:#16a34a;color:#fff">New</span> <span class="erp-nav-arrow">›</span></div>
+      <div class="erp-submenu" id="sub-tv-intel">
+        <div class="erp-nav" onclick="showErpPanel('tv-analytics',event.currentTarget)"><span class="erp-nav-icon">📈</span> Analytics / MIS <span class="erp-nav-badge" style="background:#16a34a;color:#fff">New</span></div>
+        <div class="erp-nav" onclick="showErpPanel('tv-leak',event.currentTarget)"><span class="erp-nav-icon">💧</span> Profit Leak Detector <span class="erp-nav-badge" style="background:#16a34a;color:#fff">New</span></div>
+        <div class="erp-nav" onclick="showErpPanel('tv-sentinel',event.currentTarget)"><span class="erp-nav-icon">🛡</span> Fraud &amp; Compliance Sentinel <span class="erp-nav-badge" style="background:#16a34a;color:#fff">New</span></div>
+        <div class="erp-nav" onclick="showErpPanel('tv-dna',event.currentTarget)"><span class="erp-nav-icon">🧬</span> Customer Travel-DNA <span class="erp-nav-badge" style="background:#16a34a;color:#fff">New</span></div>
+        <div class="erp-nav" onclick="showErpPanel('tv-coach',event.currentTarget)"><span class="erp-nav-icon">🎮</span> Agent Performance Coach <span class="erp-nav-badge" style="background:#16a34a;color:#fff">New</span></div>
+        <div class="erp-nav" onclick="showErpPanel('tv-tasks',event.currentTarget)"><span class="erp-nav-icon">✅</span> Task Board <span class="erp-nav-badge" style="background:#16a34a;color:#fff">New</span></div>
+      </div>
+
+      <div class="erp-nav" onclick="toggleSubmenu(this,'sub-tv-auto')"><span class="erp-nav-icon">🤖</span> Automation <span class="erp-nav-badge" style="background:#16a34a;color:#fff">New</span> <span class="erp-nav-arrow">›</span></div>
+      <div class="erp-submenu" id="sub-tv-auto">
+        <div class="erp-nav" onclick="showErpPanel('tv-docradar',event.currentTarget)"><span class="erp-nav-icon">📡</span> Document-Expiry Radar <span class="erp-nav-badge" style="background:#16a34a;color:#fff">New</span></div>
+        <div class="erp-nav" onclick="showErpPanel('tv-ocr',event.currentTarget)"><span class="erp-nav-icon">📷</span> OCR Document Vault <span class="erp-nav-badge" style="background:#16a34a;color:#fff">New</span></div>
+        <div class="erp-nav" onclick="showErpPanel('tv-wabot',event.currentTarget)"><span class="erp-nav-icon">💬</span> WhatsApp Booking Bot <span class="erp-nav-badge" style="background:#16a34a;color:#fff">New</span></div>
+        <div class="erp-nav" onclick="showErpPanel('tv-markup',event.currentTarget)"><span class="erp-nav-icon">🎚</span> Dynamic Markup Engine <span class="erp-nav-badge" style="background:#16a34a;color:#fff">New</span></div>
+      </div>
+
+      <div class="erp-nav" onclick="toggleSubmenu(this,'sub-tv-tools')"><span class="erp-nav-icon">🔧</span> Setup &amp; Tools <span class="erp-nav-badge" style="background:#16a34a;color:#fff">New</span> <span class="erp-nav-arrow">›</span></div>
+      <div class="erp-submenu" id="sub-tv-tools">
+        <div class="erp-nav" onclick="showErpPanel('tv-integrations',event.currentTarget)"><span class="erp-nav-icon">🔌</span> Integrations / API <span class="erp-nav-badge" style="background:#16a34a;color:#fff">New</span></div>
+        <div class="erp-nav" onclick="showErpPanel('tv-fx',event.currentTarget)"><span class="erp-nav-icon">💱</span> Currency / FX <span class="erp-nav-badge" style="background:#16a34a;color:#fff">New</span></div>
+        <div class="erp-nav" onclick="showErpPanel('tv-fxguard',event.currentTarget)"><span class="erp-nav-icon">🛟</span> FX Exposure Guard <span class="erp-nav-badge" style="background:#16a34a;color:#fff">New</span></div>
+      </div>
+
 
       <!-- ═════════════════════════════════════════════════════════════════
            DATA MANAGEMENT SOFTWARE (MD: 11-Jun-2026)
