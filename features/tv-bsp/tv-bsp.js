@@ -84,9 +84,22 @@ function render(){var r=root();if(!r)return; injectCss();
       +'</td></tr>';
   }).join('')||'<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:20px">No ADMs. 🎉</td></tr>';
 
-  var urows=DB.unused.map(function(u){
-    return '<tr><td class="mono">'+esc(u.id)+'</td><td>'+esc(u.pax)+'</td><td>'+esc(u.airline)+'</td><td>'+money(u.value)+'</td><td>'+esc(u.expiry)+'</td></tr>';
-  }).join('')||'<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:18px">No unused tickets.</td></tr>';
+  var urows=DB.unused.map(function(u){var st=u.status||'Open';
+    return '<tr><td class="mono">'+esc(u.id)+'</td><td>'+esc(u.pax)+'</td><td>'+esc(u.airline)+'</td><td>'+money(u.value)+'</td><td>'+esc(u.expiry)+'</td>'
+      +'<td><span class="tvb-pill" style="background:'+({Open:'#94a3b8',Claimed:'#d97706',Recovered:'#16a34a'})[st]+'">'+st+'</span></td>'
+      +'<td style="text-align:right;white-space:nowrap">'
+        +(st==='Open'?'<button class="tvb-op" title="File refund claim" onclick="tvbClaim(\''+u.id+'\')">📝 Claim</button>':'')
+        +(st==='Claimed'?'<button class="tvb-op" title="Mark recovered" onclick="tvbRecovered(\''+u.id+'\')">✓ Recovered</button>':'')
+      +'</td></tr>';
+  }).join('')||'<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:18px">No unused tickets.</td></tr>';
+
+  // fare audit: transactions whose issued (agency) fare differs from the BSP fare
+  var fa=DB.txns.filter(function(t){return t.status==='Discrepancy';});
+  var faRows=fa.map(function(t){var diff=(+t.agency||0)-(+t.bsp||0);
+    return '<tr><td class="mono">'+esc(t.id)+'</td><td>'+esc(t.airline)+'</td><td>'+money(t.agency)+'</td><td>'+money(t.bsp)+'</td>'
+      +'<td style="color:#dc2626">'+money(Math.abs(diff))+'</td>'
+      +'<td style="text-align:right;white-space:nowrap"><button class="tvb-op" title="Raise ADM" onclick="tvbToAdm(\''+t.id+'\')">⚠️</button><button class="tvb-op" title="Resolve (mark matched)" onclick="tvbResolve(\''+t.id+'\')">✓</button></td></tr>';
+  }).join('')||'<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:18px">No fare discrepancies ✓</td></tr>';
 
   var chip=function(v,l){return '<button class="tvb-chip'+(fltM===v?' on':'')+'" onclick="tvbFilter(\''+v+'\')">'+l+'</button>';};
 
@@ -111,8 +124,11 @@ function render(){var r=root();if(!r)return; injectCss();
        +'<button class="erp-btn btn-primary" onclick="tvbAdmAdd()">＋ Add ADM</button>'
      +'</div>'
      +'<table class="tvb-tbl"><thead><tr><th>ADM #</th><th>Airline</th><th>Ticket</th><th>Reason</th><th>Amount</th><th>Date</th><th>Status</th><th style="text-align:right">Action</th></tr></thead><tbody>'+arows+'</tbody></table></div>'
-   +'<div class="tvb-card tvb-pad"><div class="tvb-h">🎫 Unused / Open Tickets</div>'
-     +'<table class="tvb-tbl"><thead><tr><th>Ticket No</th><th>Held For</th><th>Airline</th><th>Value</th><th>Expiry</th></tr></thead><tbody>'+urows+'</tbody></table></div>';
+   +'<div class="tvb-card tvb-pad"><div class="tvb-h">🔎 Fare Audit — issued vs BSP fare <button class="erp-btn btn-primary btn-sm" style="margin-left:auto" onclick="tvbRunAudit()">Run fare audit</button></div>'
+     +'<table class="tvb-tbl"><thead><tr><th>Ticket</th><th>Airline</th><th>Issued (agency)</th><th>BSP fare</th><th>Variance</th><th style="text-align:right">Action</th></tr></thead><tbody>'+faRows+'</tbody></table>'
+     +'<div style="font-size:11.5px;color:var(--text3);margin-top:8px">Variances are likely ADM exposure — resolve or raise an ADM proactively before the airline does.</div></div>'
+   +'<div class="tvb-card tvb-pad"><div class="tvb-h">🎫 Unused / Open Tickets — recovery (≈3–5% of air spend)</div>'
+     +'<table class="tvb-tbl"><thead><tr><th>Ticket No</th><th>Held For</th><th>Airline</th><th>Value</th><th>Expiry</th><th>Status</th><th style="text-align:right">Action</th></tr></thead><tbody>'+urows+'</tbody></table></div>';
 }
 
 window.tvbSync=function(){ if(!DB.api.connected){alert('Connect the IATA / BSP API first.');return;}
@@ -126,6 +142,10 @@ window.tvbSync=function(){ if(!DB.api.connected){alert('Connect the IATA / BSP A
 };
 window.tvbToggleConn=function(){ DB.api.connected=!DB.api.connected; if(DB.api.connected)DB.api.lastSync=nowStr(); save(); render(); };
 window.tvbFilter=function(v){fltM=v;render();};
+window.tvbRunAudit=function(){var n=0;DB.txns.forEach(function(t){if((+t.bsp||0)>0 && (+t.agency||0)!==(+t.bsp||0) && t.status!=='Matched'){t.status='Discrepancy';n++;}});save();render();alert('🔎 Fare audit complete — '+n+' variance(s) flagged for review.');};
+window.tvbResolve=function(id){var t=DB.txns.find(function(x){return x.id===id;});if(t){t.status='Matched';if(+t.bsp===0)t.bsp=t.agency;save();render();}};
+window.tvbClaim=function(id){var u=DB.unused.find(function(x){return x.id===id;});if(u){u.status='Claimed';save();render();}};
+window.tvbRecovered=function(id){var u=DB.unused.find(function(x){return x.id===id;});if(u){u.status='Recovered';save();render();}};
 window.tvbAutoMatch=function(){var n=0;DB.txns.forEach(function(t){if(t.status==='Unmatched'){t.status=((+t.bsp||0)===(+t.agency||0)&&+t.bsp>0)?'Matched':'Discrepancy';n++;}});save();render();alert('Auto-match complete. '+n+' transaction(s) processed.');};
 window.tvbMatch=function(id){var t=DB.txns.find(function(x){return x.id===id;});if(t){t.status='Matched';if(+t.bsp===0)t.bsp=t.agency;save();render();}};
 window.tvbToAdm=function(id){var t=DB.txns.find(function(x){return x.id===id;});if(!t)return;var diff=(+t.agency||0)-(+t.bsp||0);

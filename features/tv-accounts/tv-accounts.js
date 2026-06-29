@@ -44,11 +44,15 @@ function seed(){return [
   ]}
 ];}
 var PARTIES=load();
+PARTIES.forEach(function(p){if(p.creditLimit===undefined)p.creditLimit=({Vendor:500000,GSA:300000,Agent:200000,Airline:800000,Portal:150000})[p.type]||200000;if(!p.terms)p.terms='Net 15';});
 
 /* ---- ledger math ---- */
 function sorted(p){return (p.txns||[]).slice().sort(function(a,b){return (a.date<b.date?-1:a.date>b.date?1:0);});}
 function totals(p){var d=0,cr=0;(p.txns||[]).forEach(function(t){if(dirOf(t.kind)==='debit')d+=(+t.amount||0);else cr+=(+t.amount||0);});
   return {debit:d,credit:cr,closing:(+p.opening||0)+d-cr};}
+function avail(p){return (+p.creditLimit||0)-Math.max(0,totals(p).closing);}
+function utilPct(p){var cl=+p.creditLimit||0;if(!cl)return 0;return Math.min(100,Math.round(Math.max(0,totals(p).closing)/cl*100));}
+function dpoDays(p){var t=totals(p);var base=p.type==='Agent'?t.credit:t.debit;if(!base)return 0;return Math.round(Math.max(0,t.closing)/base*30);}
 function ageing(p){ // FIFO: credits pay oldest debits first; bucket remaining debit by age
   var rows=sorted(p), debits=[]; var creditPool=( +p.opening<0?-p.opening:0);
   rows.forEach(function(t){var amt=+t.amount||0; if(dirOf(t.kind)==='debit')debits.push({date:t.date,amt:amt}); else creditPool+=amt;});
@@ -75,6 +79,7 @@ function list(r){
       +'<td class="mono">'+esc(p.phone||'—')+'</td>'
       +'<td>'+money(t.debit)+'</td><td>'+money(t.credit)+'</td>'
       +'<td><strong style="color:'+(t.closing>0?'#dc2626':t.closing<0?'#16a34a':'var(--text2)')+'">'+money(t.closing)+'</strong></td>'
+      +'<td>'+money(p.creditLimit)+'</td><td style="color:'+(avail(p)<0?'#dc2626':'var(--text2)')+'">'+money(avail(p))+'</td>'
       +'<td>'+(t.closing>0?'<span class="tva-pill" style="background:#dc2626">Due</span>':t.closing<0?'<span class="tva-pill" style="background:#16a34a">Advance</span>':'<span class="tva-pill" style="background:#94a3b8">Settled</span>')+'</td>'
       +'<td style="text-align:right"><button class="erp-btn btn-sm btn-ghost" onclick="event.stopPropagation();tvaOpen(\''+p.id+'\')">Open Account →</button></td></tr>';
   }).join('')||'<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:26px">No parties match.</td></tr>';
@@ -93,7 +98,7 @@ function list(r){
    +'<div class="tva-toolbar"><input class="tva-search" placeholder="Search party name / phone…" value="'+esc(q)+'" oninput="tvaSearch(this.value)">'
      +'<span class="tva-chips">'+chip('','All')+TYPES.map(function(t){return chip(t,t);}).join('')+'</span>'
      +'<button class="erp-btn btn-primary" style="margin-left:auto" onclick="tvaNewParty()">＋ New Party</button></div>'
-   +'<div class="tva-card"><table class="tva-tbl"><thead><tr><th>ID</th><th>Party Name</th><th>Type</th><th>Phone</th><th>Total Debit</th><th>Total Credit</th><th>Balance</th><th>Status</th><th style="text-align:right">Account</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+   +'<div class="tva-card"><table class="tva-tbl"><thead><tr><th>ID</th><th>Party Name</th><th>Type</th><th>Phone</th><th>Total Debit</th><th>Total Credit</th><th>Balance</th><th>Credit Limit</th><th>Available</th><th>Status</th><th style="text-align:right">Account</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
    +'<div style="font-size:11.5px;color:var(--text3);margin-top:8px">💡 Click any party name to open the full account — ledger, history, dues &amp; statement.</div>';
 }
 
@@ -132,6 +137,15 @@ function detail(r){
      +'<div class="tva-ageb"><span>31–60 days</span><b style="color:#d97706">'+money(ag.b30)+'</b></div>'
      +'<div class="tva-ageb"><span>60+ days</span><b style="color:#dc2626">'+money(ag.b60)+'</b></div>'
    +'</div></div>'
+   +'<div class="tva-card tva-pad"><div class="tva-h">💳 Credit &amp; Terms <button class="erp-btn btn-sm btn-ghost" style="margin-left:auto" onclick="tvaCredit(\''+p.id+'\')">Edit limit / terms</button></div>'
+     +'<div class="tva-age">'
+       +'<div class="tva-ageb"><span>Credit Limit</span><b>'+money(p.creditLimit)+'</b></div>'
+       +'<div class="tva-ageb"><span>Available</span><b style="color:'+(avail(p)<0?'#dc2626':'#16a34a')+'">'+money(avail(p))+'</b></div>'
+       +'<div class="tva-ageb"><span>Payment Terms</span><b>'+esc(p.terms||'Net 15')+'</b></div>'
+       +'<div class="tva-ageb"><span>'+(p.type==='Agent'?'DSO (days sales o/s)':'DPO (days payable o/s)')+'</span><b>'+dpoDays(p)+' days</b></div>'
+     +'</div>'
+     +'<div class="tva-util"><div class="tva-util-b" style="width:'+utilPct(p)+'%;background:'+(utilPct(p)>=90?'#dc2626':utilPct(p)>=70?'#d97706':'#16a34a')+'"></div></div>'
+     +'<div style="font-size:11.5px;color:var(--text3);margin-top:5px">Credit utilization: <b>'+utilPct(p)+'%</b>'+(utilPct(p)>=90?' — ⚠️ near limit':'')+'</div></div>'
    +'<div class="tva-card tva-pad"><div class="tva-h">➕ Add Transaction</div><div class="tva-add">'
      +'<input id="tva-date" type="date" value="'+stamp()+'">'
      +'<select id="tva-kind">'+KINDS.map(function(k){return '<option>'+esc(k.k)+'</option>';}).join('')+'</select>'
@@ -149,7 +163,8 @@ window.tvaBack=function(){view='list';curId=null;render();};
 window.tvaType=function(v){fltType=v;render();};
 window.tvaSearch=function(v){q=v;var r=root();list(r);var s=r.querySelector('.tva-search');if(s){s.focus();s.setSelectionRange(s.value.length,s.value.length);}};
 window.tvaNewParty=function(){var name=prompt('New party name:');if(!name)return;var type=prompt('Type (Vendor / Agent / GSA / Airline / Portal):','Vendor')||'Vendor';
-  PARTIES.unshift({id:uid(type==='Agent'?'AG':type==='GSA'?'GS':'VN'),name:name.trim(),type:type.trim(),phone:'',email:'',opening:0,txns:[]});save();render();};
+  PARTIES.unshift({id:uid(type==='Agent'?'AG':type==='GSA'?'GS':'VN'),name:name.trim(),type:type.trim(),phone:'',email:'',opening:0,txns:[],creditLimit:({Vendor:500000,GSA:300000,Agent:200000})[type.trim()]||200000,terms:'Net 15'});save();render();};
+window.tvaCredit=function(id){var p=PARTIES.find(function(x){return x.id===id;});if(!p)return;var cl=prompt('Credit limit (৳) for '+p.name+':',p.creditLimit||0);if(cl===null)return;p.creditLimit=+cl||0;var tm=prompt('Payment terms (e.g. Net 7 / Net 15 / Net 30):',p.terms||'Net 15');if(tm!==null)p.terms=tm.trim();save();render();};
 window.tvaAddTxn=function(){var p=PARTIES.find(function(x){return x.id===curId;});if(!p)return;var g=function(id){var e=document.getElementById(id);return e?e.value:'';};
   var amt=+g('tva-amt')||0;if(!amt){alert('Amount is required.');return;}
   p.txns.push({date:g('tva-date')||stamp(),ref:g('tva-ref').trim()||uid('TXN'),desc:g('tva-desc').trim()||'—',kind:g('tva-kind'),amount:amt});save();render();};
@@ -190,7 +205,8 @@ function injectCss(){if(document.getElementById('tva-css'))return;var s=document
   +P+'.tva-ageb{background:var(--bg3);border-radius:10px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;font-size:13px}'+P+'.tva-ageb b{font-family:"DM Mono",monospace}'
   +P+'.tva-add{display:flex;gap:9px;flex-wrap:wrap}'
   +P+'.tva-add input,'+P+'.tva-add select{border:1px solid var(--border2,#d0d6e8);background:var(--bg);border-radius:9px;padding:9px 11px;font-size:13px;font-family:inherit;color:var(--text);outline:none}'
-  +P+'.tva-op{border:0;background:none;cursor:pointer;font-size:13px;padding:3px 6px;border-radius:6px}'+P+'.tva-op:hover{background:var(--bg3)}';
+  +P+'.tva-op{border:0;background:none;cursor:pointer;font-size:13px;padding:3px 6px;border-radius:6px}'+P+'.tva-op:hover{background:var(--bg3)}'
+  +P+'.tva-util{height:10px;background:var(--bg3);border-radius:8px;overflow:hidden;margin-top:12px}'+P+'.tva-util-b{height:100%;border-radius:8px;transition:width .3s}';
   document.head.appendChild(s);
 }
 function boot(){var r=root();if(r){render();}else{document.addEventListener('DOMContentLoaded',render);}}
