@@ -23,8 +23,12 @@ The owner ("the boss") / stakeholder is **MD**; many design decisions are tagged
 - A feature must render **all its sections** so the user can do **test input** right away.
 - **Never delete** existing features/content.
 
+## Where new work goes (decided 2026-06-29)
+- **New features → `travel.html`** (the Epal Travels Employee Portal). It's the home for new modular features via `window.TravelPortal`. Build there unless told otherwise.
+- **EON → every page.** Currently embedded in both `travel.html` and `erp-combined.html`. `index.html` is just a redirect (no EON needed). Any new top-level page must get the same EON embed (import-map + 3 CSS + module script).
+
 ## EON AI companion
-- Lives entirely in `ai-companion/`; embedded in `travel.html` via an import-map (`three`) + 3 CSS links + `<script type="module" src="ai-companion/js/main.js">`.
+- Lives entirely in `ai-companion/`; embedded via an import-map (`three`) + 3 CSS links + `<script type="module" src="ai-companion/js/main.js">`.
 - Auto-boots, walks around, reacts to typing/clicks/forms, persists to localStorage. Needs a server (ES modules) — works on GitHub Pages, not `file://`. Resolves its own paths via `import.meta.url`. The `✕` chip hides it.
 
 ## How the app works (architecture)
