@@ -1,0 +1,47 @@
+/* ════════════════════════════════════════════════════════════════════
+   tv-polish.css — shared presentation layer for the NEW Travel feature
+   panels only (scoped to .tvx). Loaded once via travel.html. Original
+   operational panels are NOT marked .tvx, so they are untouched.
+   Goal: one cohesive look — aligned numbers, consistent forms/tables,
+   focus states, responsive overflow, tidy scrollbars.
+   ════════════════════════════════════════════════════════════════════ */
+
+/* tabular figures so money/qty columns line up cleanly everywhere */
+.tvx{ font-variant-numeric: tabular-nums; }
+
+/* ---- consistent focus ring on every input/select/textarea ---- */
+.tvx input:focus, .tvx select:focus, .tvx textarea:focus{
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px rgba(37,99,235,.13) !important;
+}
+
+/* ---- tables: tidy base + vertical centering ---- */
+.tvx table{ border-collapse: collapse; }
+.tvx td, .tvx th{ vertical-align: middle; }
+/* right-align dedicated amount cells when marked (.num / .amt) */
+.tvx td.num, .tvx th.num, .tvx td.amt, .tvx th.amt{ text-align: right; }
+
+/* ---- KPI value typography unified across all panels ---- */
+.tvx [class$="-kpi"] .v, .tvx [class$="-kpi"] .val{
+  font-family: 'DM Mono', ui-monospace, monospace; letter-spacing: -.3px;
+}
+
+/* ---- buttons inside feature panels: gentle, consistent radius ---- */
+.tvx .erp-btn{ border-radius: 9px; }
+
+/* ---- empty-state cells read as muted & centered ---- */
+.tvx td.empty, .tvx .empty{ text-align: center; color: var(--text3); font-style: italic; }
+
+/* ---- tidy thin scrollbars for overflowing cards/boards ---- */
+.tvx ::-webkit-scrollbar{ width: 9px; height: 9px; }
+.tvx ::-webkit-scrollbar-thumb{ background: var(--border2,#d0d6e8); border-radius: 6px; }
+.tvx ::-webkit-scrollbar-track{ background: transparent; }
+
+/* ---- responsive: wide tables scroll instead of clipping on small screens ---- */
+@media (max-width: 860px){
+  .tvx [class$="-card"]{ overflow-x: auto !important; }
+  .tvx [class$="-tbl"], .tvx table{ min-width: 560px; }
+}
+
+/* ---- required-field marker (use <span class="req">*</span> in labels) ---- */
+.tvx .req{ color: var(--red,#dc2626); font-weight: 700; margin-left: 2px; }
